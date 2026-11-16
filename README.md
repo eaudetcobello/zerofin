@@ -20,10 +20,10 @@ Run it:
 moviestreamer                  # serves ~/Downloads
 moviestreamer ~/Movies         # serves a folder
 moviestreamer movie.mkv        # serves one file and its subtitles
-moviestreamer -port 9000 -no-qr
+moviestreamer -port 9000
 ```
 
-It prints the LAN address (for example `http://10.0.0.92:8080/`) and a QR code.
+It prints the LAN address (for example `http://10.0.0.92:8080/`).
 
 ### Image subtitles
 

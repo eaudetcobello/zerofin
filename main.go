@@ -18,8 +18,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-
-	"github.com/mdp/qrterminal/v3"
 )
 
 var contentTypes = map[string]string{
@@ -84,9 +82,8 @@ type group struct {
 
 func main() {
 	port := flag.Int("port", 8080, "port to listen on")
-	noQR := flag.Bool("no-qr", false, "don't print a QR code")
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "usage: %s [-port N] [-no-qr] [video file or folder, default ~/Downloads]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "usage: %s [-port N] [video file or folder, default ~/Downloads]\n", os.Args[0])
 		flag.PrintDefaults()
 	}
 	flag.Parse()
@@ -137,10 +134,6 @@ func main() {
 		}
 	} else {
 		fmt.Printf("Serving folder %s\n\nWeb UI: %s\n", target, shown)
-	}
-	if !*noQR {
-		fmt.Println()
-		qrterminal.GenerateHalfBlock(shown, qrterminal.L, os.Stdout)
 	}
 	fmt.Println()
 
