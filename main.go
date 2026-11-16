@@ -1,4 +1,4 @@
-// Command moviestreamer serves a video file, or every video and subtitle file in
+// Command zerofin serves a video file, or every video and subtitle file in
 // a folder, over HTTP on the LAN, with Range support for seeking.
 package main
 

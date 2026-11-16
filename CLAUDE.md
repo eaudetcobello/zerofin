@@ -1,6 +1,6 @@
-# moviestreamer
+# zerofin
 
-See README.md for building, running and deploying. Summary: `make install` for the CLI, `make tv` to sign and install the TV app.
+See README.md for building, running and deploying. Summary: `make install` for the CLI (`zerofin`), `make tv` to sign and install the TV app.
 
 ## TV app constraints
 

@@ -1,5 +1,5 @@
 // MovieStreamer for Samsung Tizen TVs: lists the videos served by the
-// moviestreamer Go server and plays them with AVPlay. ES5 for older TV engines.
+// zerofin Go server and plays them with AVPlay. ES5 for older TV engines.
 (function () {
   var av = window.webapis && webapis.avplay;
   var $ = function (id) { return document.getElementById(id); };

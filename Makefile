@@ -3,10 +3,10 @@ BIN := $(HOME)/.local/bin
 # `make` builds the binary and installs it to ~/.local/bin.
 install: build
 	install -d $(BIN)
-	install -m 755 moviestreamer $(BIN)/moviestreamer
+	install -m 755 zerofin $(BIN)/zerofin
 
 build:
-	go build -o moviestreamer .
+	go build -o zerofin .
 
 .PHONY: install build
 

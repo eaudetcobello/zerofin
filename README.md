@@ -1,4 +1,4 @@
-# moviestreamer
+# zerofin
 
 Streams videos from a Mac to devices on the LAN. Two parts:
 
@@ -10,17 +10,17 @@ Streams videos from a Mac to devices on the LAN. Two parts:
 Requires Go.
 
 ```sh
-make build      # builds ./moviestreamer
-make install    # builds and installs to ~/.local/bin/moviestreamer
+make build      # builds ./zerofin
+make install    # builds and installs to ~/.local/bin/zerofin
 ```
 
 Run it:
 
 ```sh
-moviestreamer                  # serves ~/Downloads
-moviestreamer ~/Movies         # serves a folder
-moviestreamer movie.mkv        # serves one file and its subtitles
-moviestreamer -port 9000
+zerofin                  # serves ~/Downloads
+zerofin ~/Movies         # serves a folder
+zerofin movie.mkv        # serves one file and its subtitles
+zerofin -port 9000
 ```
 
 It prints the LAN address (for example `http://10.0.0.92:8080/`).
