@@ -41,12 +41,14 @@
       var groups;
       try { groups = JSON.parse(text); } catch (e) {}
       if (!text || !groups) return setup('Could not reach ' + base() + '/api/list');
+      var prev = rows[sel] && rows[sel].path;
       rows = [];
       (groups || []).forEach(function (g) {
         if (g.dir) rows.push({ dir: g.dir });
         g.videos.forEach(function (v) { rows.push(v); });
       });
       $('title').textContent = 'MovieStreamer · ' + server;
+      rows.forEach(function (r, i) { if (prev && r.path === prev) sel = i; });
       sel = Math.max(0, Math.min(sel, rows.length - 1));
       if (rows[sel] && rows[sel].dir) move(1);
       render();
@@ -152,6 +154,7 @@
     cur = null; seekTarget = null;
     hideOsd(); hidePill();
     show('browse');
+    load();
   }
 
   function tick(ms) {
@@ -332,6 +335,7 @@
 
   document.addEventListener('visibilitychange', function () {
     if (document.hidden && cur) try { av.pause(); pill('❚❚  Paused', true); osd(true); } catch (e) {}
+    if (!document.hidden && $('browse').className.indexOf(' on') >= 0) load();
   });
 
   if (server) load(); else setup();
