@@ -6,7 +6,7 @@
   var server = localStorage.getItem('server') || '';
   var lib = [], titles = [], tsel = 0, open = null, kind = 0, sortBy = 0;
   var rows = [], sel = 0;
-  var COLS = 7, KINDS = ['All', 'Movies', 'Shows'], SORTS = ['Title', 'Recently added', 'Year'];
+  var COLS = 7, KINDS = ['All', 'Movies', 'Shows'], SORTS = ['Recently added', 'Title', 'Year'];
   var cur = null, subs = [], subIdx = 0, cues = null, audioIdx = 0, osdTimer = 0, subTimer = 0;
   var K = { enter: 13, back: 10009, left: 37, up: 38, right: 39, down: 40 };
 
@@ -61,7 +61,7 @@
     var prev = titles[tsel] && titles[tsel].id;
     titles = lib.filter(function (t) { return !kind || (kind === 2) === t.show; });
     titles.sort(function (a, b) {
-      var d = sortBy === 1 ? b.added - a.added : sortBy === 2 ? b.year - a.year : 0;
+      var d = sortBy === 0 ? b.added - a.added : sortBy === 2 ? b.year - a.year : 0;
       return d || a.title.toLowerCase().localeCompare(b.title.toLowerCase());
     });
     titles.forEach(function (t, i) { if (t.id === prev) tsel = i; });

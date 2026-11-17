@@ -40,7 +40,7 @@ Without `pgsrip` on the PATH, the server skips this step.
 
 The server groups the videos into movies and shows from their file names: `Title (2015)` or `Title.2015.1080p...` gives the title and year, and `S01E02` or `1x02` gives the season and episode, with the text after it as the episode title. A file name without a title, such as `S01E02.mkv`, takes the title of its top folder.
 
-The web page at `/` shows the titles as a poster grid with a search box, a Movies / Shows filter and sorting by title, date added or year. A title opens its episodes by season, each with a ▶ link that plays it in mpv-android. The page is rendered by the server and uses no JavaScript.
+The web page at `/` shows the titles as a poster grid with a search box, a Movies / Shows filter and sorting by date added (the default), title or year. A title opens its episodes by season, each with a ▶ link that plays it in mpv-android. The page is rendered by the server and uses no JavaScript.
 
 ### Posters
 
@@ -56,7 +56,7 @@ Endpoints:
 
 | Path | Purpose |
 | --- | --- |
-| `/` | Library page with mpv-android play links (folder mode only). Query: `q`, `kind` (`movie`, `show`), `sort` (`added`, `year`), or `t` and `s` for one title and season. |
+| `/` | Library page with mpv-android play links (folder mode only). Query: `q`, `kind` (`movie`, `show`), `sort` (`title`, `year`; newest first by default), or `t` and `s` for one title and season. |
 | `/api/library` | JSON list of movies and shows, each with its poster path and its videos (season, episode, episode title, path, subtitles). Used by the TV app. |
 | `/api/poster` | Redirects to the TMDB poster for `kind` (`movie`, `tv`), `title` and `year` |
 | `/api/list` | JSON list of videos grouped by folder, each with its `.srt`/`.vtt` subtitles. The TV app uses it to find new subtitles during playback. |
@@ -106,7 +106,7 @@ The first screen is a poster grid of movies and shows. OK opens a title and list
 | OK | Open | Play | Pause / resume |
 | ⏪ ⏩ | | | Same as ◀ ▶ in 60 s steps |
 | Green | Show all, movies or shows | | |
-| Yellow | Sort by title, date added or year | | |
+| Yellow | Sort by date added (the default), title or year | | |
 | Red | Change server | | |
 | Back | Exit | Back to grid | Back to title |
 

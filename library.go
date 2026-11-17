@@ -235,7 +235,7 @@ type pageData struct {
 }
 
 // servePage renders the library. The query selects a title (t) and season (s),
-// or filters (q, kind) and sorts (sort) the grid.
+// or filters (q, kind) and sorts (sort) the grid, newest first by default.
 func (s *server) servePage(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	lib := s.library("http://" + r.Host)
@@ -271,7 +271,7 @@ func (s *server) servePage(w http.ResponseWriter, r *http.Request) {
 			return link{label, "/?" + v.Encode(), q.Get(key) == val}
 		}
 		d.Kinds = []link{option("kind", "", "All"), option("kind", "movie", "Movies"), option("kind", "show", "Shows")}
-		d.Sorts = []link{option("sort", "", "Title"), option("sort", "added", "Recently added"), option("sort", "year", "Year")}
+		d.Sorts = []link{option("sort", "", "Recently added"), option("sort", "title", "Title"), option("sort", "year", "Year")}
 		for _, t := range lib {
 			kindOK := d.Kind == "" || (d.Kind == "show") == t.Show
 			if kindOK && strings.Contains(strings.ToLower(t.Title), strings.ToLower(d.Q)) {
@@ -280,7 +280,7 @@ func (s *server) servePage(w http.ResponseWriter, r *http.Request) {
 		}
 		sort.SliceStable(d.Titles, func(a, b int) bool {
 			x, y := d.Titles[a], d.Titles[b]
-			if d.Sort == "added" && x.Added != y.Added {
+			if d.Sort == "" && x.Added != y.Added {
 				return x.Added > y.Added
 			}
 			if d.Sort == "year" && x.Year != y.Year {
