@@ -95,14 +95,19 @@ To find a TV's IP, any Samsung TV answers `http://<ip>:8001/api/v2/` with its mo
 
 ### Using it
 
-On first launch, type the server address (for example `10.0.0.92:8080`) and press Done. Red changes it later.
+On first launch, type the server address (for example `10.0.0.92:8080`) and press Done.
 
-| Key | List | Player |
-| --- | --- | --- |
-| ▲ ▼ | Move | Cycle subtitles / audio track |
-| OK | Play | Pause / resume |
-| ◀ ▶ | | Pick a position on the seek bar (10 s steps, 30 s and 60 s when held). OK jumps there, Back cancels. |
-| ⏪ ⏩ | | Same as ◀ ▶ in 60 s steps |
-| Back | Exit | Back to list |
+The first screen is a poster grid of movies and shows. OK opens a title and lists its videos, grouped by season.
+
+| Key | Grid | Title | Player |
+| --- | --- | --- | --- |
+| ▲ ▼ | Move | Move | Cycle subtitles / audio track |
+| ◀ ▶ | Move | | Pick a position on the seek bar (10 s steps, 30 s and 60 s when held). OK jumps there, Back cancels. |
+| OK | Open | Play | Pause / resume |
+| ⏪ ⏩ | | | Same as ◀ ▶ in 60 s steps |
+| Green | Show all, movies or shows | | |
+| Yellow | Sort by title, date added or year | | |
+| Red | Change server | | |
+| Back | Exit | Back to grid | Back to title |
 
 Playback resumes where it stopped. Subtitles come from `.srt`/`.vtt` files next to the video (the server pairs them by file name) and from text tracks inside the video. On a first play, image subtitles are still being converted: press ▲ after a few seconds and the app picks up the new `.srt`.

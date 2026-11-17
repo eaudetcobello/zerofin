@@ -4,17 +4,19 @@
   var av = window.webapis && webapis.avplay;
   var $ = function (id) { return document.getElementById(id); };
   var server = localStorage.getItem('server') || '';
+  var lib = [], titles = [], tsel = 0, open = null, kind = 0, sortBy = 0;
   var rows = [], sel = 0;
+  var COLS = 7, KINDS = ['All', 'Movies', 'Shows'], SORTS = ['Title', 'Recently added', 'Year'];
   var cur = null, subs = [], subIdx = 0, cues = null, audioIdx = 0, osdTimer = 0, subTimer = 0;
   var K = { enter: 13, back: 10009, left: 37, up: 38, right: 39, down: 40 };
 
-  ['MediaPlayPause', 'MediaPlay', 'MediaPause', 'MediaStop', 'MediaFastForward', 'MediaRewind', 'ColorF0Red']
+  ['MediaPlayPause', 'MediaPlay', 'MediaPause', 'MediaStop', 'MediaFastForward', 'MediaRewind', 'ColorF0Red', 'ColorF1Green', 'ColorF2Yellow']
     .forEach(function (name) {
       try { tizen.tvinputdevice.registerKey(name); K[name] = tizen.tvinputdevice.getKey(name).code; } catch (e) {}
     });
 
   function show(id) {
-    ['setup', 'browse', 'player'].forEach(function (s) { $(s).className = 'screen' + (s === id ? ' on' : ''); });
+    ['setup', 'browse', 'title', 'player'].forEach(function (s) { $(s).className = 'screen' + (s === id ? ' on' : ''); });
   }
 
   function base() { return 'http://' + server.replace(/^https?:\/\//, '').replace(/\/+$/, ''); }
@@ -36,24 +38,93 @@
     $('addr').focus();
   }
 
+  // load fetches the library, then shows the open title again, or the grid.
   function load() {
-    get(base() + '/api/list', function (text) {
-      var groups;
-      try { groups = JSON.parse(text); } catch (e) {}
-      if (!text || !groups) return setup('Could not reach ' + base() + '/api/list');
-      var prev = rows[sel] && rows[sel].path;
-      rows = [];
-      (groups || []).forEach(function (g) {
-        if (g.dir) rows.push({ dir: g.dir });
-        g.videos.forEach(function (v) { rows.push(v); });
-      });
+    get(base() + '/api/library', function (text) {
+      var data;
+      try { data = JSON.parse(text); } catch (e) {}
+      if (!text || !data) return setup('Could not reach ' + base() + '/api/library');
+      lib = data;
       $('title').textContent = 'MovieStreamer · ' + server;
-      rows.forEach(function (r, i) { if (prev && r.path === prev) sel = i; });
-      sel = Math.max(0, Math.min(sel, rows.length - 1));
-      if (rows[sel] && rows[sel].dir) move(1);
-      render();
+      var t = null;
+      lib.forEach(function (x) { if (x.id === open) t = x; });
+      if (t) return openTitle(t);
+      open = null;
+      grid();
       show('browse');
     });
+  }
+
+  // grid draws the poster tiles, filtered by kind and sorted. A tile shows the
+  // title as text when it has no poster.
+  function grid() {
+    var prev = titles[tsel] && titles[tsel].id;
+    titles = lib.filter(function (t) { return !kind || (kind === 2) === t.show; });
+    titles.sort(function (a, b) {
+      var d = sortBy === 1 ? b.added - a.added : sortBy === 2 ? b.year - a.year : 0;
+      return d || a.title.toLowerCase().localeCompare(b.title.toLowerCase());
+    });
+    titles.forEach(function (t, i) { if (t.id === prev) tsel = i; });
+    tsel = Math.max(0, Math.min(tsel, titles.length - 1));
+    $('hint').textContent = 'OK open · Green show: ' + KINDS[kind] + ' · Yellow sort: ' + SORTS[sortBy] + ' · Red change server · Back exit';
+    var g = $('grid');
+    g.innerHTML = '';
+    if (!titles.length) g.textContent = 'No videos.';
+    titles.forEach(function (t) {
+      var d = document.createElement('div'), p = document.createElement('div'), n = document.createElement('div');
+      d.className = 'tile';
+      p.className = 'poster';
+      p.textContent = t.title;
+      if (t.poster) {
+        var img = document.createElement('img');
+        img.onerror = function () { p.removeChild(img); };
+        img.src = base() + t.poster;
+        p.appendChild(img);
+      }
+      n.className = 'tname';
+      n.textContent = t.title + (t.year ? ' (' + t.year + ')' : '');
+      d.appendChild(p);
+      d.appendChild(n);
+      g.appendChild(d);
+    });
+    pick(tsel);
+  }
+
+  // pick moves the grid selection to tile i and scrolls its row to the top.
+  function pick(i) {
+    var g = $('grid');
+    if (!titles[i]) return;
+    if (g.children[tsel]) g.children[tsel].className = 'tile';
+    tsel = i;
+    g.children[i].className = 'tile sel';
+    g.scrollTop = g.children[i].offsetTop - g.offsetTop - 8;
+  }
+
+  // openTitle lists the videos of a title, with a header row per season.
+  function openTitle(t) {
+    var prev = open === t.id && rows[sel] && rows[sel].path, season = null;
+    if (open !== t.id) sel = 0;
+    open = t.id;
+    rows = [];
+    t.videos.forEach(function (v) {
+      if (t.show && v.season !== season) {
+        season = v.season;
+        rows.push({ dir: season ? 'Season ' + season : 'Specials' });
+      }
+      var name = t.show ? v.episode + ' · ' + (v.title || 'Episode ' + v.episode) : v.name;
+      rows.push({
+        name: name,
+        full: t.show ? t.title + ' · S' + v.season + ' E' + name : t.title,
+        path: v.url,
+        subs: v.subs.map(function (s) { return s.url; })
+      });
+    });
+    rows.forEach(function (r, i) { if (prev && r.path === prev) sel = i; });
+    sel = Math.max(0, Math.min(sel, rows.length - 1));
+    if (rows[sel] && rows[sel].dir) move(1);
+    $('tname').textContent = t.title + (t.year ? ' (' + t.year + ')' : '');
+    render();
+    show('title');
   }
 
   function render() {
@@ -83,7 +154,7 @@
     cur = v;
     subs = [{ label: 'Off' }]; subIdx = 0; cues = null; audioIdx = 0; seekTarget = null;
     $('sub').textContent = '';
-    $('name').textContent = v.name;
+    $('name').textContent = v.full;
     show('player');
     pill('Loading…', true);
     try {
@@ -153,7 +224,7 @@
     try { av.stop(); av.close(); } catch (e) {}
     cur = null; seekTarget = null;
     hideOsd(); hidePill();
-    show('browse');
+    show(open ? 'title' : 'browse');
     load();
   }
 
@@ -310,15 +381,27 @@
         localStorage.setItem('server', server);
         $('addr').blur();
         load();
-      } else if (k === K.back && rows.length) show('browse');
+      } else if (k === K.back && lib.length) show('browse');
       return;
     }
     if (screen === 'browse') {
+      var last = titles.length - 1;
+      if (k === K.left) pick(tsel - 1);
+      else if (k === K.right) pick(tsel + 1);
+      else if (k === K.up) pick(tsel - COLS);
+      else if (k === K.down) pick(Math.floor(tsel / COLS) < Math.floor(last / COLS) ? Math.min(tsel + COLS, last) : -1);
+      else if (k === K.enter && titles[tsel]) openTitle(titles[tsel]);
+      else if (k === K.ColorF1Green) { kind = (kind + 1) % KINDS.length; grid(); }
+      else if (k === K.ColorF2Yellow) { sortBy = (sortBy + 1) % SORTS.length; grid(); }
+      else if (k === K.ColorF0Red) setup();
+      else if (k === K.back) tizen.application.getCurrentApplication().exit();
+      return;
+    }
+    if (screen === 'title') {
       if (k === K.up) { move(-1); render(); }
       else if (k === K.down) { move(1); render(); }
       else if (k === K.enter && rows[sel] && !rows[sel].dir) play(rows[sel]);
-      else if (k === K.ColorF0Red) setup();
-      else if (k === K.back) tizen.application.getCurrentApplication().exit();
+      else if (k === K.back) { open = null; grid(); show('browse'); }
       return;
     }
     if (k === K.back && seekTarget !== null) cancelSeek();
@@ -335,7 +418,7 @@
 
   document.addEventListener('visibilitychange', function () {
     if (document.hidden && cur) try { av.pause(); pill('❚❚  Paused', true); osd(true); } catch (e) {}
-    if (!document.hidden && $('browse').className.indexOf(' on') >= 0) load();
+    if (!document.hidden && !$('player').classList.contains('on') && !$('setup').classList.contains('on')) load();
   });
 
   if (server) load(); else setup();
