@@ -36,12 +36,30 @@ uv tool install pgsrip
 
 Without `pgsrip` on the PATH, the server skips this step.
 
+### Library
+
+The server groups the videos into movies and shows from their file names: `Title (2015)` or `Title.2015.1080p...` gives the title and year, and `S01E02` or `1x02` gives the season and episode, with the text after it as the episode title. A file name without a title, such as `S01E02.mkv`, takes the title of its top folder.
+
+The web page at `/` shows the titles as a poster grid with a search box, a Movies / Shows filter and sorting by title, date added or year. A title opens its episodes by season, each with a ▶ link that plays it in mpv-android. The page is rendered by the server and uses no JavaScript.
+
+### Posters
+
+Set `TMDB_API_KEY` to a [TMDB](https://www.themoviedb.org/settings/api) API key or API Read Access Token to show posters:
+
+```sh
+TMDB_API_KEY=... zerofin ~/Movies
+```
+
+The server searches TMDB by title and year and redirects the browser to the poster image. Without the key, tiles show the title as text.
+
 Endpoints:
 
 | Path | Purpose |
 | --- | --- |
-| `/` | HTML list with mpv-android play links (folder mode only) |
-| `/api/list` | JSON list of videos grouped by folder, each with its `.srt`/`.vtt` subtitles. Used by the TV app. |
+| `/` | Library page with mpv-android play links (folder mode only). Query: `q`, `kind` (`movie`, `show`), `sort` (`added`, `year`), or `t` and `s` for one title and season. |
+| `/api/library` | JSON list of movies and shows, each with its poster path and its videos (season, episode, episode title, path, subtitles). Used by the TV app. |
+| `/api/poster` | Redirects to the TMDB poster for `kind` (`movie`, `tv`), `title` and `year` |
+| `/api/list` | JSON list of videos grouped by folder, each with its `.srt`/`.vtt` subtitles. The TV app uses it to find new subtitles during playback. |
 | `/<path>` | The file itself, with Range support |
 
 ## TV app

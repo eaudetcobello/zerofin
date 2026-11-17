@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"html/template"
 	"io/fs"
 	"log"
 	"net"
@@ -18,6 +17,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 )
 
 var contentTypes = map[string]string{
@@ -32,48 +32,23 @@ var contentTypes = map[string]string{
 	".vtt":  "text/vtt",
 }
 
-var indexTmpl = template.Must(template.New("index").Parse(`<!doctype html>
-<html lang="en">
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{{.Title}}</title>
-<style>
-:root{color-scheme:light dark;font-family:system-ui,sans-serif}
-body{max-width:48rem;margin:0 auto;padding:1rem}
-h1{font-size:1.25rem;overflow-wrap:anywhere}
-summary{padding:.75rem .25rem;font-weight:600;cursor:pointer;overflow-wrap:anywhere;border-bottom:1px solid #8884}
-details ul{margin-left:1rem}
-p{opacity:.7}
-ul{list-style:none;padding:0;margin:0}
-li{display:flex;align-items:center;gap:.5rem;border-bottom:1px solid #8884}
-a{text-decoration:none}
-.f{flex:1;padding:.75rem .25rem;overflow-wrap:anywhere}
-.p{flex:none;padding:.5rem .75rem;border:1px solid currentColor;border-radius:.5rem}
-</style>
-<h1>{{.Title}}</h1>
-<p>Tap ▶ to play in mpv, or long-press a file to copy its link.</p>
-{{$one := eq (len .Groups) 1}}
-{{range .Groups}}{{if .Dir}}<details{{if $one}} open{{end}}><summary>{{.Dir}}</summary>{{end}}
-<ul>{{range .Files}}<li><a class="f" href="{{.URL}}">{{.Name}}</a>{{if .Play}}<a class="p" href="{{.Play}}" aria-label="Play in mpv">▶</a>{{end}}{{end}}</ul>
-{{if .Dir}}</details>{{end}}
-{{else}}<p>No playable files.</p>{{end}}
-`))
-
 // server serves allowed files from root. In single-file mode, only that file and
 // subtitles sharing its base name are allowed, and there is no index page.
 type server struct {
-	root   *os.Root
-	dir    string
-	title  string
-	single string
-	ripped sync.Map
+	root    *os.Root
+	dir     string
+	single  string
+	tmdb    string
+	ripped  sync.Map
+	posters sync.Map
 }
 
 // entry is one listed file. Play is an Android intent:// link that opens the
 // stream in mpv-android, set for videos only.
 type entry struct {
 	Name, URL string
-	Play      template.URL
+	Play      string
+	Mod       time.Time
 }
 type group struct {
 	Dir   string
@@ -109,7 +84,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	s := &server{title: filepath.Base(target)}
+	s := &server{tmdb: os.Getenv("TMDB_API_KEY")}
 	dir := target
 	if !st.IsDir() {
 		dir = filepath.Dir(target)
@@ -142,14 +117,19 @@ func main() {
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/" && s.single == "" {
-		data := struct {
-			Title  string
-			Groups []group
-		}{s.title, s.list("http://" + r.Host)}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		if err := indexTmpl.Execute(w, data); err != nil {
-			log.Print(err)
-		}
+		s.servePage(w, r)
+		return
+	}
+
+	if r.URL.Path == "/api/library" {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(s.library(""))
+		return
+	}
+
+	if r.URL.Path == "/api/poster" {
+		s.servePoster(w, r)
 		return
 	}
 
@@ -263,8 +243,11 @@ func (s *server) list(base string) []group {
 		g := &groups[i]
 		e := entry{Name: path.Base(p), URL: base + escape(p)}
 		if ct := contentTypes[strings.ToLower(path.Ext(p))]; strings.HasPrefix(ct, "video/") {
-			e.Play = template.URL("intent://" + strings.TrimPrefix(base, "http://") + escape(p) +
-				"#Intent;scheme=http;type=" + ct + ";package=is.xyz.mpv;end")
+			e.Play = "intent://" + strings.TrimPrefix(base, "http://") + escape(p) +
+				"#Intent;scheme=http;type=" + ct + ";package=is.xyz.mpv;end"
+		}
+		if info, err := d.Info(); err == nil {
+			e.Mod = info.ModTime()
 		}
 		g.Files = append(g.Files, e)
 		return nil
@@ -296,15 +279,7 @@ func (s *server) serveList(w http.ResponseWriter) {
 			if f.Play == "" {
 				continue
 			}
-			v := apiVideo{Name: f.Name, Path: f.URL, Subs: []string{}}
-			stem := strings.TrimSuffix(f.Name, path.Ext(f.Name))
-			for _, sf := range g.Files {
-				ext := strings.ToLower(path.Ext(sf.Name))
-				if (ext == ".srt" || ext == ".vtt") && strings.HasPrefix(sf.Name, stem) {
-					v.Subs = append(v.Subs, sf.URL)
-				}
-			}
-			ag.Videos = append(ag.Videos, v)
+			ag.Videos = append(ag.Videos, apiVideo{Name: f.Name, Path: f.URL, Subs: subsOf(g, f.Name)})
 		}
 		if len(ag.Videos) > 0 {
 			out = append(out, ag)
@@ -313,6 +288,20 @@ func (s *server) serveList(w http.ResponseWriter) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(out)
+}
+
+// subsOf returns the URLs of the .srt and .vtt files in g whose names start
+// with the base name of video.
+func subsOf(g group, video string) []string {
+	subs := []string{}
+	stem := strings.TrimSuffix(video, path.Ext(video))
+	for _, f := range g.Files {
+		ext := strings.ToLower(path.Ext(f.Name))
+		if (ext == ".srt" || ext == ".vtt") && strings.HasPrefix(f.Name, stem) {
+			subs = append(subs, f.URL)
+		}
+	}
+	return subs
 }
 
 // escape turns a slash-separated relative path into an escaped URL path.

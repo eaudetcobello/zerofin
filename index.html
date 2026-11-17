@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>zerofin</title>
+<style>
+:root{color-scheme:light dark;font-family:system-ui,sans-serif}
+body{max-width:72rem;margin:0 auto;padding:1rem}
+a{color:inherit;text-decoration:none}
+h1{font-size:1.25rem;margin:0 0 .5rem;overflow-wrap:anywhere}
+small{display:block;opacity:.65}
+small a{text-decoration:underline}
+.bar{display:flex;flex-wrap:wrap;gap:.5rem;margin:1rem 0}
+input,.bar a,.p{font:inherit;padding:.5rem .75rem;border:1px solid #8886;border-radius:.5rem;background:none;color:inherit}
+input{width:100%;box-sizing:border-box}
+.bar .on{background:CanvasText;color:Canvas}
+.gap{flex:1}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(8.5rem,1fr));gap:1rem}
+.poster{position:relative;aspect-ratio:2/3;border-radius:.5rem;overflow:hidden;background:#8883;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:600;overflow-wrap:anywhere}
+.poster img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.grid b{display:block;margin-top:.4rem;font-size:.9rem;overflow-wrap:anywhere}
+.head{display:flex;gap:1rem;align-items:flex-end;margin:1rem 0}
+.head .poster{width:7rem;flex:none}
+ul{list-style:none;padding:0;margin:0}
+li{display:flex;align-items:center;gap:.75rem;padding:.5rem 0;border-bottom:1px solid #8884}
+.n{flex:none;width:1.75rem;text-align:right;opacity:.6}
+.f{flex:1;min-width:0;overflow-wrap:anywhere}
+.p{flex:none}
+</style>
+{{define "poster"}}<div class="poster">{{.Title}}{{if .Poster}}<img loading="lazy" alt="" src="{{.Poster}}">{{end}}</div>{{end}}
+{{with .Title}}
+<a href="/">‹ All titles</a>
+<div class="head">{{template "poster" .}}<div><h1>{{.Title}}</h1><small>{{.Meta}}</small></div></div>
+{{if gt (len $.Seasons) 1}}<nav class="bar">{{range $.Seasons}}<a{{if .On}} class="on"{{end}} href="{{.URL}}">{{.Label}}</a>{{end}}</nav>{{end}}
+<ul>{{range $.Videos}}<li>
+{{if $.Title.Show}}<span class="n">{{.Episode}}</span>{{end}}
+<div class="f"><a href="{{.URL}}">{{if not $.Title.Show}}{{.Name}}{{else if .Title}}{{.Title}}{{else}}Episode {{.Episode}}{{end}}</a>
+{{if .Subs}}<small>Subtitles: {{range .Subs}}<a href="{{.URL}}">{{.Label}}</a> {{end}}</small>{{end}}</div>
+<a class="p" href="{{.Play}}" aria-label="Play in mpv">▶</a>
+</li>{{end}}</ul>
+{{else}}
+<h1>zerofin</h1>
+<form action="/">
+<input type="search" name="q" value="{{.Q}}" placeholder="Search" aria-label="Search">
+{{if .Kind}}<input type="hidden" name="kind" value="{{.Kind}}">{{end}}
+{{if .Sort}}<input type="hidden" name="sort" value="{{.Sort}}">{{end}}
+</form>
+<nav class="bar">{{range .Kinds}}<a{{if .On}} class="on"{{end}} href="{{.URL}}">{{.Label}}</a>{{end}}<span class="gap"></span>{{range .Sorts}}<a{{if .On}} class="on"{{end}} href="{{.URL}}">{{.Label}}</a>{{end}}</nav>
+<div class="grid">{{range .Titles}}<a href="/?t={{.ID}}">{{template "poster" .}}<b>{{.Title}}</b><small>{{.Meta}}</small></a>{{end}}</div>
+{{if not .Titles}}<p>Nothing to show.</p>{{end}}
+{{end}}
